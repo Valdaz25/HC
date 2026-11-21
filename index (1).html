@@ -1,0 +1,415 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>[hidden]{display:none!important}</style><title>Historia Clínica en Línea</title></head><body>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Versión final. Layout: barra de demo plegable + cabecera con pestañas por rol + una pantalla a la vez (hash routing) */
+:root{
+  --bg:#F2F6F5; --surface:#FFFFFF; --fg:#14201E; --muted:#566864; --line:#D2DCD9;
+  --accent:#0E6B5F; --accent-ink:#FFFFFF; --accent-soft:#DCEEEA;
+  --warn:#8F5600; --warn-soft:#FAEBCF; --bad:#A02828; --bad-soft:#F7DDDD;
+  --ok:#1C7439; --ok-soft:#DBEFE0; --info:#1D5CA3; --info-soft:#DCE9F7;
+  --font:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1715; --surface:#16231F; --fg:#E6EFEC; --muted:#9DB0AA; --line:#2A3C37;
+  --accent:#4FC3AE; --accent-ink:#06211C; --accent-soft:#1B3A34;
+  --warn:#F0B45A; --warn-soft:#3A2C12; --bad:#F29A9A; --bad-soft:#3B1C1C;
+  --ok:#76D494; --ok-soft:#17331F; --info:#8DB8F0; --info-soft:#172B44; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0E1715; --surface:#16231F; --fg:#E6EFEC; --muted:#9DB0AA; --line:#2A3C37;
+  --accent:#4FC3AE; --accent-ink:#06211C; --accent-soft:#1B3A34;
+  --warn:#F0B45A; --warn-soft:#3A2C12; --bad:#F29A9A; --bad-soft:#3B1C1C;
+  --ok:#76D494; --ok-soft:#17331F; --info:#8DB8F0; --info-soft:#172B44; color-scheme:dark;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 var(--font);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 40px}
+.wrap{max-width:980px;margin:0 auto}
+h1,h2,h3{line-height:1.2;margin:0;text-wrap:balance}
+h1{font-size:1.75rem} h2{font-size:1.25rem} h3{font-size:1.05rem}
+h1:focus{outline:none}
+p{margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.demo{background:var(--accent-soft);border-bottom:1px solid var(--line);margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)));padding:0 max(16px,env(safe-area-inset-left,0px))}
+.dm summary{cursor:pointer;min-height:44px;display:block;line-height:1.4;padding:10px 0;box-sizing:border-box;font-size:.875rem}
+.dm summary b{color:var(--accent)}
+.dmbody{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding-bottom:10px;font-size:.875rem}
+.seg{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.seg button{border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:999px;padding:4px 14px;cursor:pointer;font-size:.875rem;min-height:44px}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.link{background:none;border:0;color:var(--accent);text-decoration:underline;cursor:pointer;padding:0 6px;min-height:44px;display:inline-flex;align-items:center;text-align:left}
+details.tour{flex-basis:100%;font-size:.875rem}
+details.tour summary{cursor:pointer;color:var(--accent);min-height:44px;display:flex;align-items:center}
+details.tour ol{margin:0 0 8px;padding-left:20px;display:grid;gap:2px}
+header.top{display:flex;flex-wrap:wrap;gap:4px 24px;align-items:center;justify-content:space-between;padding:16px 0 4px}
+.brand{display:flex;gap:10px;align-items:center;font-weight:700}
+.brand small{display:block;font-weight:400;color:var(--muted);font-size:.8125rem}
+nav.tabs{display:flex;flex-wrap:wrap;gap:4px}
+nav.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 12px;min-height:44px;cursor:pointer;color:var(--muted);font-weight:700}
+nav.tabs button[aria-current="page"]{color:var(--accent);border-color:var(--accent)}
+.who{font-size:.875rem;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+main{padding-top:12px;display:grid;gap:20px}
+.tag{font:500 .75rem var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.lead{color:var(--muted);margin-top:6px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px;display:grid;gap:12px;align-content:start}
+.card.hl{border-color:var(--accent);background:linear-gradient(0deg,var(--accent-soft),var(--accent-soft)) , var(--surface)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}
+.counts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.counts div{border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center}
+.counts strong{display:block;font-size:1.6rem;font-variant-numeric:tabular-nums}
+.counts span{font-size:.8125rem;color:var(--muted)}
+.btn{background:var(--accent);color:var(--accent-ink);border:2px solid var(--accent);border-radius:8px;padding:10px 18px;min-height:44px;font-weight:700;cursor:pointer;justify-self:start}
+.btn.alt{background:transparent;color:var(--accent)}
+.btn.ghost-bad{background:transparent;color:var(--bad);border-color:var(--bad)}
+.btn.sm{padding:6px 14px}
+.btn:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--info);outline-offset:2px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+.row{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}
+label{font-weight:700;display:block;margin-bottom:4px}
+input[type=text],input[type=date],input[type=password],input[type=email],input[type=tel],input[type=search],select,textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-height:44px}
+textarea{min-height:88px;resize:vertical}
+.field{display:grid;gap:2px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:14px}
+.hint{font-size:.8125rem;color:var(--muted)}
+.err{color:var(--bad);background:var(--bad-soft);border-radius:8px;padding:8px 12px;font-size:.9375rem}
+.radio{display:flex;gap:18px;flex-wrap:wrap}
+.radio label{font-weight:400;display:flex;gap:8px;align-items:center;margin:0;min-height:44px}
+.pill{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.8125rem;font-weight:700;white-space:nowrap}
+.pill.info{background:var(--info-soft);color:var(--info)} .pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.bad{background:var(--bad-soft);color:var(--bad)}
+.mono{font-family:var(--mono);font-size:.875rem}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:560px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle;font-size:.9375rem}
+th{font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--bg)}
+tr:last-child td{border-bottom:0}
+.steps{display:flex;gap:6px;list-style:none;padding:0;margin:0;flex-wrap:wrap}
+.steps li{flex:1 1 140px;border-top:4px solid var(--line);padding-top:6px;font-size:.875rem;color:var(--muted)}
+.steps li.on{border-color:var(--accent);color:var(--fg);font-weight:700}
+.steps li.done{border-color:var(--accent)}
+.tl{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;list-style:none;padding:0;margin:0}
+.tl li{border-top:4px solid var(--line);padding-top:6px;font-size:.8125rem;color:var(--muted)}
+.tl li.done{border-color:var(--ok);color:var(--fg)} .tl li.bad{border-color:var(--bad);color:var(--bad)}
+.tl b{display:block;font-size:.875rem}
+dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 16px;margin:0}
+dl.kv dt{color:var(--muted)} dl.kv dd{margin:0;font-weight:700;overflow-wrap:anywhere}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 14px;min-height:44px;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.file{display:flex;gap:14px;align-items:center;border:1px dashed var(--line);border-radius:8px;padding:14px}
+.file svg{flex:none}
+.notes{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.notes li{display:flex;gap:10px;align-items:flex-start;border-bottom:1px solid var(--line);padding-bottom:8px;font-size:.9375rem}
+.notes li:last-child{border:0;padding:0}
+.notes time{display:block;font-size:.8125rem;color:var(--muted)}
+.bar{height:10px;border-radius:5px;background:var(--line);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.how{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:12px;list-style:none;padding:0;margin:0}
+.how li{border-top:4px solid var(--accent);padding-top:8px;display:grid;gap:2px;align-content:start}
+.how span{color:var(--muted);font-size:.9375rem}
+.left{padding:2px 10px;border-radius:999px;background:var(--warn-soft);color:var(--warn);font-weight:700;font-size:.8125rem;white-space:nowrap}
+.login{max-width:440px;margin:24px auto 0;width:100%}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:max(20px,env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:8px;max-width:min(92vw,520px);z-index:20;font-size:.9375rem;box-shadow:0 4px 16px rgba(0,0,0,.25)}
+@media (prefers-reduced-motion:no-preference){.card{transition:border-color .15s}}
+@media (max-width:640px){
+  h1{font-size:1.5rem}.card{padding:16px}dl.kv{grid-template-columns:1fr}dl.kv dt{margin-top:6px}
+  .tw.sw{border:0;background:none;overflow:visible;border-radius:0}
+  table.stack{min-width:0;display:block}
+  table.stack thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  table.stack tbody{display:grid;gap:10px}
+  table.stack tr{display:grid;grid-template-columns:1fr auto;grid-template-areas:"id st" "who who" "tipo age" "act act";gap:6px 12px;padding:14px;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+  table.stack td{display:block;border:0;padding:0}
+  .c-id{grid-area:id}.c-st{grid-area:st;text-align:right}.c-who{grid-area:who}.c-tipo{grid-area:tipo}.c-age{grid-area:age;text-align:right;color:var(--muted)}.c-act{grid-area:act}
+  .c-act .btn{width:100%}
+  table.stack.aud tr{grid-template-areas:"af as" "au au" "aa aa"}
+  .a-f{grid-area:af;color:var(--muted)}.a-s{grid-area:as;text-align:right}.a-u{grid-area:au}.a-a{grid-area:aa;font-weight:700}
+}
+</style>
+
+<div class="demo" role="region" aria-label="Modo demostración"><div class="wrap">
+  <details class="dm" id="dm"><summary><b>Modo demostración</b> · datos de ejemplo, sin base de datos</summary>
+    <div class="dmbody">
+      <span class="seg" role="group" aria-label="Ver como"><span>Ver como:</span>
+        <button data-act="role" data-r="paciente" aria-pressed="false">Paciente</button>
+        <button data-act="role" data-r="archivo" aria-pressed="false">Personal de archivo</button>
+        <button data-act="role" data-r="admin" aria-pressed="false">Administrador</button></span>
+      <button class="link" data-act="reset">Reiniciar datos</button>
+      <details class="tour"><summary>Recorrido sugerido del flujo principal</summary>
+        <ol>
+          <li>Ver como Paciente: Inicio, Nueva solicitud, complete los 3 pasos y envíe.</li>
+          <li>Mis solicitudes: aparece la confirmación y la solicitud como «Recibida».</li>
+          <li>Ver como Personal de archivo: busque la solicitud, ábrala, adjunte el PDF y apruebe (o rechace con un motivo frecuente).</li>
+          <li>Vuelva a Paciente: llegó la notificación y ya puede descargar el PDF.</li>
+          <li>Ver como Administrador: la auditoría registró cada paso y se puede filtrar.</li>
+        </ol></details>
+    </div>
+  </details>
+</div></div>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="8" fill="var(--accent)"/><path d="M14 8h6v6h6v6h-6v6h-6v-6H8v-6h6z" fill="var(--accent-ink)"/></svg>
+      <div>Historia Clínica en Línea<small>Hospital San José del Nus</small></div>
+    </div>
+    <nav class="tabs" id="nav" aria-label="Principal"></nav>
+    <div class="who" id="who"></div>
+  </header>
+  <main id="app"></main>
+</div>
+<aside aria-label="Avisos"><div id="toast" role="status" aria-live="polite" hidden></div></aside>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const DAY=864e5;
+const fmtDT=d=>d.toLocaleString('es-CO',{day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'});
+const now=()=>fmtDT(new Date());
+const ago=(d,h,m)=>{const x=new Date(Date.now()-d*DAY);x.setHours(h,m,0,0);return fmtDT(x)};
+const fecha=d=>d.toLocaleDateString('es-CO',{day:'numeric',month:'short',year:'numeric'});
+const diasRest=r=>Math.ceil((r.expMs-Date.now())/DAY);
+const quedan=r=>{const d=diasRest(r);return d<=0?'vence hoy':d===1?'queda 1 día':'quedan '+d+' días'};
+const hace=r=>{const d=Math.floor((Date.now()-r.t0)/DAY);return d<=0?'hoy':d===1?'hace 1 día':'hace '+d+' días'};
+const PAC='María Gómez (ejemplo)', ARCH='Andrea Londoño (ejemplo)', ADM='Administrador TI (ejemplo)';
+const ROLEN={paciente:'Paciente',archivo:'Personal de archivo',admin:'Administrador'};
+const WHO={paciente:PAC,archivo:ARCH,admin:ADM};
+const HOME={paciente:'inicio',archivo:'bandeja',admin:'auditoria'};
+const ALLOWED={paciente:['inicio','nueva','estado','descarga'],archivo:['bandeja','revision'],admin:['auditoria']};
+const NAV={paciente:[['inicio','Inicio'],['nueva','Nueva solicitud'],['estado','Mis solicitudes']],archivo:[['bandeja','Bandeja de solicitudes']],admin:[['auditoria','Auditoría y usuarios']]};
+const FLOW=['Recibida','En revisión','Aprobada','Disponible'];
+const REASONS=[['Autorización no válida','La autorización adjunta no corresponde al paciente.'],['Datos no coinciden','Los datos del solicitante no coinciden con la identidad verificada.'],['Período no disponible','El período solicitado no está disponible en el archivo.'],['Falta información','Falta información para ubicar la historia clínica.']];
+
+function fresh(){return{role:null,sel:null,step:1,tab:'auditoria',filter:'Todas',err:'',lmode:'paciente',bq:'',aq:'',aact:'Todas',just:null,last:'',cur:'',
+  form:{doc:'43000123',exp:'2005-03-14',code:'',para:'mi',docT:'',auth:'',tipo:'Historia clínica completa',desde:'2023-01-01',hasta:new Date().toISOString().slice(0,10),motivo:'Remisión a especialista'},
+  rev:{pdf:'',rmotivo:''},
+  requests:[
+   {id:'SOL-0041',owner:'pac',sol:PAC,doc:'CC 43.000.123',para:'Ella misma',tipo:'Historia clínica completa',desde:'2023-01-01',hasta:'2026-10-31',motivo:'Remisión a especialista',estado:'Disponible',pdf:'HC_43000123_2023-2026.pdf',expMs:Date.now()+5*DAY,expira:fecha(new Date(Date.now()+5*DAY)),t0:Date.now()-4*DAY,hist:[['Recibida',ago(4,9,12)],['En revisión',ago(4,14,30)],['Aprobada',ago(2,8,45)],['Disponible',ago(2,8,47)]]},
+   {id:'SOL-0042',owner:'pac',sol:PAC,doc:'CC 43.000.123',para:'Ella misma',tipo:'Epicrisis',desde:'2026-09-01',hasta:'2026-10-31',motivo:'Trámite con la EPS',estado:'En revisión',t0:Date.now()-1*DAY,hist:[['Recibida',ago(1,16,20)],['En revisión',ago(1,17,5)]]},
+   {id:'SOL-0043',owner:'otro',sol:'Carlos Ruiz (ejemplo)',doc:'CC 71.000.456',para:'Su hijo menor (tercero)',tipo:'Resumen de atención',desde:'2025-01-01',hasta:'2026-11-05',motivo:'Segunda opinión médica',auth:'autorizacion_firmada.pdf',estado:'Recibida',t0:Date.now()-1*DAY,hist:[['Recibida',ago(1,7,50)]]},
+   {id:'SOL-0044',owner:'otro',sol:'Luz Marina Torres (ejemplo)',doc:'CC 22.000.789',para:'Ella misma',tipo:'Resultados de exámenes',desde:'2026-06-01',hasta:'2026-11-05',motivo:'Incapacidad',estado:'Recibida',t0:Date.now()-1*DAY,hist:[['Recibida',ago(1,9,5)]]},
+   {id:'SOL-0040',owner:'otro',sol:'Jorge Álvarez (ejemplo)',doc:'CC 98.000.321',para:'Su madre (tercero)',tipo:'Historia clínica completa',desde:'2020-01-01',hasta:'2026-10-27',motivo:'Trámite legal',auth:'carta.pdf',estado:'Rechazada',motivoRechazo:'La autorización adjunta no corresponde a la paciente.',t0:Date.now()-6*DAY,hist:[['Recibida',ago(6,11,0)],['En revisión',ago(6,15,10)],['Rechazada',ago(5,8,30)]]}
+  ],
+  audit:[
+   [ago(2,8,47),ARCH,'Cargó PDF y aprobó','SOL-0041'],
+   [ago(5,8,30),ARCH,'Rechazó solicitud','SOL-0040'],
+   [ago(4,14,30),ARCH,'Abrió solicitud para revisión','SOL-0041'],
+   [ago(4,9,12),PAC,'Creó solicitud','SOL-0041'],
+   [ago(6,11,0),'Jorge Álvarez (ejemplo)','Creó solicitud','SOL-0040']
+  ],
+  notifs:[[ago(1,17,5),'Su solicitud SOL-0042 está en revisión.'],[ago(2,8,47),'Su solicitud SOL-0041 ya está disponible para descarga.']],
+  users:[[PAC,'CC 43.000.123','Paciente'],['Carlos Ruiz (ejemplo)','CC 71.000.456','Representante legal'],[ARCH,'CC 1.037.555.010','Personal de archivo'],[ADM,'CC 1.037.555.020','Administrador']]
+}}
+let S=fresh();
+
+const pillC={'Recibida':'info','En revisión':'warn','Aprobada':'ok','Disponible':'ok','Rechazada':'bad'};
+const pill=e=>`<span class="pill ${pillC[e]||'info'}">${esc(e)}</span>`;
+const head=(t,title,lead)=>`<div><p class="tag">${esc(t)}</p><h1>${esc(title)}</h1>${lead?`<p class="lead">${esc(lead)}</p>`:''}</div>`;
+const errBox=()=>S.err?`<p class="err" role="alert">${esc(S.err)}</p>`:'';
+const mine=()=>S.requests.filter(r=>r.owner==='pac');
+const byId=id=>S.requests.find(r=>r.id===id);
+const como=()=>`<section class="card"><h2>¿Cómo funciona?</h2><ol class="how"><li><b>1. Solicite</b><span>Verifique su identidad y diga qué documento necesita.</span></li><li><b>2. Revisión</b><span>El personal de archivo revisa su solicitud y le avisa.</span></li><li><b>3. Descargue</b><span>Reciba el PDF aquí, sin ir al hospital.</span></li></ol></section>`;
+function tl(r){const done=Object.fromEntries(r.hist.map(h=>[h[0],h[1]]));
+  const steps=r.estado==='Rechazada'?['Recibida','En revisión','Rechazada']:FLOW;
+  return `<ol class="tl">${steps.map(s=>`<li class="${done[s]?(s==='Rechazada'?'bad':'done'):''}"><b>${s}</b>${done[s]?esc(done[s]):'Pendiente'}</li>`).join('')}</ol>`}
+function logEv(u,a,ref){S.audit.unshift([now(),u,a,ref])}
+function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.h);toast.h=setTimeout(()=>t.hidden=true,3200)}
+function go(to,sel){S.err='';if(sel!==undefined)S.sel=sel;if(location.hash==='#'+to)render();else location.hash=to}
+
+function bandejaRes(){
+  const q=S.bq.trim().toLowerCase();
+  const open=r=>['Recibida','En revisión'].includes(r.estado);
+  const rows=S.requests.filter(r=>(S.filter==='Todas'||r.estado===S.filter)&&(!q||(r.id+' '+r.sol+' '+r.doc).toLowerCase().includes(q)))
+    .sort((a,b)=>(open(b)-open(a))||(a.t0-b.t0));
+  return `<p class="hint" aria-live="polite">${rows.length} ${rows.length===1?'solicitud':'solicitudes'}, las pendientes primero y las más antiguas arriba.</p>
+  <div class="tw sw" tabindex="0" role="region" aria-label="Lista de solicitudes"><table class="stack"><thead><tr><th>Radicado</th><th>Solicitante</th><th>Tipo</th><th>Recibida</th><th>Estado</th><th><span class="sr">Acción</span></th></tr></thead><tbody>
+  ${rows.map(r=>`<tr><td class="c-id mono">${r.id}</td><td class="c-who">${esc(r.sol)}<br><span class="hint">${esc(r.para)}</span></td><td class="c-tipo">${esc(r.tipo)}</td><td class="c-age">${hace(r)}</td><td class="c-st">${pill(r.estado)}</td><td class="c-act"><button class="btn alt sm" data-act="review" data-id="${r.id}">${open(r)?'Revisar':'Ver'}</button></td></tr>`).join('')||'<tr><td colspan="6">No hay solicitudes que coincidan con la búsqueda.</td></tr>'}
+  </tbody></table></div>`}
+
+function auditRes(){
+  const q=S.aq.trim().toLowerCase();
+  const rows=S.audit.filter(a=>(S.aact==='Todas'||a[2].startsWith(S.aact))&&(!q||(a[1]+' '+a[3]).toLowerCase().includes(q)));
+  return `<p class="hint" aria-live="polite">${rows.length} ${rows.length===1?'evento':'eventos'}</p>
+  <div class="tw sw" tabindex="0" role="region" aria-label="Registro de auditoría"><table class="stack aud"><thead><tr><th>Fecha y hora</th><th>Usuario</th><th>Acción</th><th>Solicitud</th></tr></thead><tbody>${rows.map(a=>`<tr><td class="a-f">${esc(a[0])}</td><td class="a-u">${esc(a[1])}</td><td class="a-a">${esc(a[2])}</td><td class="a-s mono">${esc(a[3])}</td></tr>`).join('')||'<tr><td colspan="4">No hay eventos con ese filtro.</td></tr>'}</tbody></table></div>`}
+const RES={bandeja:bandejaRes,auditoria:auditRes};
+function refreshRes(){const f=RES[S.cur],el=$('#res');if(f&&el&&!(S.cur==='auditoria'&&S.tab!=='auditoria'))el.innerHTML=f()}
+
+const SCREENS={
+login(){const per=S.lmode==='personal';
+  return `<div class="login card">
+  <div><p class="tag">W1 · Inicio de sesión</p><h1>${per?'Ingreso del personal':'Ingresar'}</h1><p class="lead">${per?'Solo para personal de archivo y administradores del hospital.':'Solicite y descargue su historia clínica desde su celular o computador.'}</p></div>
+  <form data-form="login" class="card" style="padding:0;border:0;gap:14px">
+    <div class="field"><label for="l-doc">Número de documento</label><input id="l-doc" name="ldoc" type="text" inputmode="numeric" value="${per?'1037555010':'43000123'}" autocomplete="username"></div>
+    <div class="field"><label for="l-pwd">Contraseña</label><input id="l-pwd" name="lpwd" type="password" value="ejemplo123" autocomplete="current-password"></div>
+    ${per?`<div class="field"><label for="l-rol">Rol</label><select id="l-rol" name="lrol"><option value="archivo">Personal de archivo</option><option value="admin">Administrador</option></select></div>`:''}
+    <button class="btn" type="submit">Ingresar</button>
+  </form>
+  ${errBox()}
+  <div class="row"><button class="link" data-act="forgot">¿Olvidó su contraseña?</button>${per?'':'<button class="link" data-act="go" data-to="registro">Crear cuenta</button>'}</div>
+  <button class="link" data-act="lmode">${per?'Volver al ingreso de pacientes':'Ingreso del personal del hospital'}</button>
+  <p class="hint">Sus datos clínicos son reservados (Resolución 1995 de 1999) y sus datos personales están protegidos por la Ley 1581 de 2012.</p></div>
+  ${per?'':`<div class="login" style="margin-top:16px">${como()}</div>`}`},
+
+registro(){return `<div class="login card" style="max-width:640px">
+  <div><p class="tag">W1 · Registro de paciente</p><h1>Crear cuenta</h1></div>
+  <form data-form="registro" class="card" style="padding:0;border:0;gap:14px">
+    <div class="fields">
+      <div class="field"><label for="r-n">Nombre completo</label><input id="r-n" type="text" required autocomplete="name"></div>
+      <div class="field"><label for="r-td">Tipo de documento</label><select id="r-td"><option>Cédula de ciudadanía</option><option>Tarjeta de identidad</option><option>Cédula de extranjería</option></select></div>
+      <div class="field"><label for="r-d">Número de documento</label><input id="r-d" type="text" inputmode="numeric" required></div>
+      <div class="field"><label for="r-f">Fecha de nacimiento</label><input id="r-f" type="date" required></div>
+      <div class="field"><label for="r-e">Correo electrónico</label><input id="r-e" type="email" required autocomplete="email"></div>
+      <div class="field"><label for="r-c">Celular</label><input id="r-c" type="tel" inputmode="tel" required autocomplete="tel"></div>
+      <div class="field"><label for="r-p">Contraseña</label><input id="r-p" type="password" required autocomplete="new-password"></div>
+    </div>
+    <label style="font-weight:400;display:flex;gap:10px;align-items:flex-start"><input type="checkbox" required style="margin-top:5px"> Autorizo el tratamiento de mis datos personales según la Ley 1581 de 2012.</label>
+    <div class="row"><button class="btn" type="submit">Crear cuenta</button><button type="button" class="btn alt" data-act="go" data-to="login">Volver</button></div>
+  </form></div>`},
+
+inicio(){const m=mine(),disp=m.filter(r=>r.estado==='Disponible'),tram=m.filter(r=>['Recibida','En revisión'].includes(r.estado)),rech=m.filter(r=>r.estado==='Rechazada');
+  return head('W2 · Panel del paciente','Hola, María','Aquí puede pedir su historia clínica y seguir el estado de cada solicitud.')+
+  (disp.length?`<section class="card hl"><div class="row" style="justify-content:space-between"><h2>Tiene un documento disponible</h2><span class="left">${esc(quedan(disp[0]))}</span></div><p>Solicitud <span class="mono">${disp[0].id}</span> · ${esc(disp[0].tipo)}. Disponible hasta el ${esc(disp[0].expira)}.</p><button class="btn" data-act="open-dl" data-id="${disp[0].id}">Ir a la descarga</button></section>`:'')+
+  `<div class="grid2">
+   <section class="card"><h2>¿Necesita una copia de su historia clínica?</h2><p>Complete tres pasos y reciba el PDF aquí, sin desplazarse al hospital.</p><button class="btn" data-act="go" data-to="nueva">Nueva solicitud</button></section>
+   <section class="card"><h2>Mis solicitudes</h2><div class="counts"><div><strong>${tram.length}</strong><span>En trámite</span></div><div><strong>${disp.length}</strong><span>Disponibles</span></div><div><strong>${rech.length}</strong><span>Rechazadas</span></div></div><button class="btn alt" data-act="go" data-to="estado">Ver estado</button></section>
+  </div>
+  ${como()}
+  <section class="card"><h2>Notificaciones</h2><ul class="notes">${S.notifs.map(n=>`<li><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style="flex:none;margin-top:3px"><path d="M12 3a6 6 0 0 0-6 6v4l-2 3h16l-2-3V9a6 6 0 0 0-6-6zm-2 15a2 2 0 0 0 4 0z" fill="var(--accent)"/></svg><div>${esc(n[1])}<time>${esc(n[0])}</time></div></li>`).join('')}</ul></section>`},
+
+nueva(){const f=S.form,st=S.step;
+  const stepper=`<ol class="steps" aria-label="Pasos"><li class="${st===1?'on':st>1?'done':''}">1 · Verificar identidad</li><li class="${st===2?'on':st>2?'done':''}">2 · Datos de la solicitud</li><li class="${st===3?'on':''}">3 · Confirmar</li></ol>`;
+  let body='';
+  if(st===1)body=`<h2>Verifique su identidad</h2><p class="hint">Paso 1 de 3. Lo hacemos para proteger su información clínica.</p>
+    <div class="fields"><div class="field"><label for="f-doc">Número de documento</label><input id="f-doc" name="doc" type="text" inputmode="numeric" value="${esc(f.doc)}"></div>
+    <div class="field"><label for="f-exp">Fecha de expedición del documento</label><input id="f-exp" name="exp" type="date" value="${esc(f.exp)}"></div>
+    <div class="field"><label for="f-code">Código enviado a su celular</label><input id="f-code" name="code" type="text" inputmode="numeric" maxlength="6" value="${esc(f.code)}"><span class="hint">En este prototipo use 482913.</span></div></div>`;
+  if(st===2)body=`<h2>Datos de la solicitud</h2><p class="hint">Paso 2 de 3.</p>
+    <div class="field"><label>¿Para quién es la historia clínica?</label><div class="radio"><label><input type="radio" name="para" value="mi" ${f.para==='mi'?'checked':''}> Para mí</label><label><input type="radio" name="para" value="tercero" ${f.para==='tercero'?'checked':''}> Para otra persona a mi cargo</label></div></div>
+    ${f.para==='tercero'?`<div class="fields"><div class="field"><label for="f-dt">Documento de la persona</label><input id="f-dt" name="docT" type="text" inputmode="numeric" value="${esc(f.docT)}"></div>
+      <div class="field"><label>Documento que acredita su autorización</label><div class="row"><button type="button" class="btn alt" data-act="attach" data-k="auth">Adjuntar archivo</button><span class="mono">${f.auth?esc(f.auth):'Sin archivo'}</span></div></div></div>`:''}
+    <div class="fields"><div class="field"><label for="f-tipo">Tipo de documento</label><select id="f-tipo" name="tipo">${['Historia clínica completa','Epicrisis','Resumen de atención','Resultados de exámenes'].map(o=>`<option ${f.tipo===o?'selected':''}>${o}</option>`).join('')}</select></div>
+    <div class="field"><label for="f-mot">Motivo</label><select id="f-mot" name="motivo">${['Remisión a especialista','Incapacidad','Trámite con la EPS','Segunda opinión médica','Trámite legal','Otro'].map(o=>`<option ${f.motivo===o?'selected':''}>${o}</option>`).join('')}</select></div>
+    <div class="field"><label for="f-d">Desde</label><input id="f-d" name="desde" type="date" value="${esc(f.desde)}"></div>
+    <div class="field"><label for="f-h">Hasta</label><input id="f-h" name="hasta" type="date" value="${esc(f.hasta)}"></div></div>`;
+  if(st===3)body=`<h2>Confirme su solicitud</h2><p class="hint">Paso 3 de 3. Revise los datos antes de enviar.</p>
+    <dl class="kv"><dt>Documento</dt><dd>${esc(f.doc)} · identidad verificada</dd><dt>Para</dt><dd>${f.para==='mi'?'Usted':'Otra persona ('+esc(f.docT)+')'}</dd><dt>Tipo</dt><dd>${esc(f.tipo)}</dd><dt>Período</dt><dd>${esc(f.desde)} a ${esc(f.hasta)}</dd><dt>Motivo</dt><dd>${esc(f.motivo)}</dd>${f.para==='tercero'?`<dt>Autorización</dt><dd>${esc(f.auth)}</dd>`:''}</dl>
+    <p class="hint">Recibirá una notificación en cada cambio de estado.</p>`;
+  return head('W3 · Nueva solicitud','Nueva solicitud')+`<section class="card">${stepper}${body}${errBox()}
+    <div class="row">${st>1?'<button class="btn alt" data-act="back">Atrás</button>':''}${st<3?'<button class="btn" data-act="next">Continuar</button>':'<button class="btn" data-act="send">Enviar solicitud</button>'}</div></section>`},
+
+estado(){const m=mine(),j=S.just?byId(S.just):null;
+  return head('W4 · Estado de solicitudes','Mis solicitudes','Cada cambio de estado también le llega como notificación.')+
+  (j?`<section class="card hl" role="status"><h2>Solicitud enviada</h2><p>Su número de solicitud es <b class="mono">${j.id}</b>. Guárdelo para consultarla.</p>
+    <ol class="how"><li><b>Ahora</b><span>El personal de archivo recibió su solicitud.</span></li><li><b>Luego</b><span>La revisan y le avisamos si la aprueban o necesitan más datos.</span></li><li><b>Al final</b><span>Si la aprueban, el PDF aparece aquí para descargarlo.</span></li></ol>
+    <button class="btn alt" data-act="dismiss">Entendido</button></section>`:'')+
+  (m.length?m.map(r=>`<section class="card"><div class="row" style="justify-content:space-between"><h2><span class="mono">${r.id}</span> · ${esc(r.tipo)}</h2>${pill(r.estado)}</div>
+   <p class="hint">${esc(r.motivo)} · ${esc(r.desde)} a ${esc(r.hasta)}</p>${tl(r)}
+   ${r.estado==='Rechazada'?`<p class="err">Motivo del rechazo: ${esc(r.motivoRechazo)}</p>`:''}
+   ${r.estado==='Disponible'?`<div class="row"><button class="btn" data-act="open-dl" data-id="${r.id}">Descargar</button><span class="left">${esc(quedan(r))}</span></div>`:''}</section>`).join(''):'<section class="card"><p>Aún no tiene solicitudes.</p><button class="btn" data-act="go" data-to="nueva">Crear la primera</button></section>')},
+
+descarga(){const r=byId(S.sel)||mine().find(x=>x.estado==='Disponible');
+  if(!r||r.estado!=='Disponible')return head('W5 · Descarga','Descarga')+`<section class="card"><p>No hay documentos disponibles por ahora.</p><button class="btn alt" data-act="go" data-to="estado">Ver mis solicitudes</button></section>`;
+  return head('W5 · Descarga','Su historia clínica está lista')+`<section class="card">
+   <div class="file"><svg width="40" height="48" viewBox="0 0 40 48" aria-hidden="true"><path d="M4 2h22l10 10v34H4z" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="2"/><path d="M26 2v10h10" fill="none" stroke="var(--accent)" stroke-width="2"/></svg>
+   <div><b class="mono">${esc(r.pdf)}</b><p class="hint">${esc(r.tipo)} · ${esc(r.desde)} a ${esc(r.hasta)} · PDF protegido</p></div></div>
+   <dl class="kv"><dt>Solicitud</dt><dd class="mono">${r.id}</dd><dt>Disponible hasta</dt><dd>${esc(r.expira)} <span class="left">${esc(quedan(r))}</span></dd></dl>
+   <p class="hint">Descargue su copia en un equipo de confianza. Cada descarga queda registrada.</p>
+   <div class="row"><button class="btn" data-act="download" data-id="${r.id}">Descargar PDF</button><button class="btn alt" data-act="go" data-to="estado">Volver</button></div></section>`},
+
+bandeja(){const fl=['Todas','Recibida','En revisión','Disponible','Rechazada'];
+  const cnt=e=>S.requests.filter(r=>r.estado===e).length;
+  return head('W6 · Bandeja del personal de archivo','Solicitudes de historia clínica',`${cnt('Recibida')} por revisar · ${cnt('En revisión')} en revisión`)+
+  `<div class="field"><label for="b-q">Buscar solicitud</label><input id="b-q" name="bq" type="search" value="${esc(S.bq)}" placeholder="Radicado, nombre o documento"></div>
+  <div class="chips" role="group" aria-label="Filtrar por estado">${fl.map(f=>`<button data-act="filter" data-f="${f}" aria-pressed="${S.filter===f}">${f}</button>`).join('')}</div>
+  <div id="res">${bandejaRes()}</div>`},
+
+revision(){const r=byId(S.sel);if(!r)return head('W7 · Revisión','Revisión')+`<section class="card"><button class="btn alt" data-act="go" data-to="bandeja">Volver a la bandeja</button></section>`;
+  const open=['Recibida','En revisión'].includes(r.estado);
+  return head('W7 · Revisión de solicitud',r.id+' · '+r.tipo)+`<div class="grid2">
+  <section class="card"><div class="row" style="justify-content:space-between"><h2>Datos de la solicitud</h2>${pill(r.estado)}</div>
+   <dl class="kv"><dt>Solicitante</dt><dd>${esc(r.sol)}</dd><dt>Documento</dt><dd>${esc(r.doc)}</dd><dt>Para</dt><dd>${esc(r.para)}</dd><dt>Período</dt><dd>${esc(r.desde)} a ${esc(r.hasta)}</dd><dt>Motivo</dt><dd>${esc(r.motivo)}</dd><dt>Identidad</dt><dd><span class="pill ok">Verificada</span></dd>${r.auth?`<dt>Autorización</dt><dd class="mono">${esc(r.auth)}</dd>`:''}</dl>${tl(r)}</section>
+  <section class="card"><h2>Decisión</h2>
+   ${open?`<div class="field"><label>Documento de la historia clínica (PDF)</label><div class="row"><button class="btn alt" data-act="attach" data-k="pdf">Adjuntar PDF</button><span class="mono">${S.rev.pdf?esc(S.rev.pdf):'Sin archivo'}</span></div></div>
+   <div class="field"><label for="rv-m">Motivo del rechazo (solo si rechaza)</label><textarea id="rv-m" name="rmotivo">${esc(S.rev.rmotivo)}</textarea></div>
+   <div class="field"><span class="hint">Motivos frecuentes, toque uno para usarlo:</span><div class="chips" role="group" aria-label="Motivos frecuentes de rechazo">${REASONS.map((x,i)=>`<button type="button" data-act="reason" data-i="${i}">${x[0]}</button>`).join('')}</div></div>
+   ${errBox()}
+   <div class="row"><button class="btn" data-act="approve">Aprobar y publicar</button><button class="btn ghost-bad" data-act="reject">Rechazar</button></div>`
+   :`<p>Esta solicitud ya fue resuelta: ${pill(r.estado)}</p>${r.motivoRechazo?`<p class="err">${esc(r.motivoRechazo)}</p>`:''}<button class="btn alt" data-act="go" data-to="bandeja">Volver a la bandeja</button>`}
+  </section></div>`},
+
+auditoria(){const t=S.tab;
+  const tabs=`<div class="chips" role="group" aria-label="Secciones">${[['auditoria','Auditoría'],['usuarios','Usuarios y roles'],['reportes','Reportes básicos']].map(x=>`<button data-act="tab" data-t="${x[0]}" aria-pressed="${t===x[0]}">${x[1]}</button>`).join('')}</div>`;
+  let b='';
+  if(t==='auditoria')b=`<div class="fields"><div class="field"><label for="a-q">Buscar por usuario o solicitud</label><input id="a-q" name="aq" type="search" value="${esc(S.aq)}" placeholder="Nombre o radicado"></div>
+    <div class="field"><label for="a-a">Tipo de acción</label><select id="a-a" name="aact">${['Todas','Creó','Abrió','Cargó','Rechazó','Descargó','Cambió'].map(o=>`<option ${S.aact===o?'selected':''}>${o}</option>`).join('')}</select></div></div><div id="res">${auditRes()}</div>`;
+  if(t==='usuarios')b=`<div class="tw" tabindex="0" role="region" aria-label="Usuarios y roles"><table><thead><tr><th>Nombre</th><th>Documento</th><th>Rol</th></tr></thead><tbody>${S.users.map((u,i)=>`<tr><td>${esc(u[0])}</td><td>${esc(u[1])}</td><td><select aria-label="Rol de ${esc(u[0])}" data-user="${i}">${['Paciente','Representante legal','Personal de archivo','Administrador'].map(o=>`<option ${u[2]===o?'selected':''}>${o}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table></div>`;
+  if(t==='reportes'){const tot=S.requests.length||1;b=`<section class="card"><h2>Solicitudes por estado</h2>${['Recibida','En revisión','Disponible','Rechazada'].map(e=>{const n=S.requests.filter(r=>r.estado===e).length;return `<div><div class="row" style="justify-content:space-between"><span>${e}</span><b>${n}</b></div><div class="bar"><i style="width:${Math.round(n/tot*100)}%"></i></div></div>`}).join('')}<p class="hint">Total de solicitudes: ${S.requests.length}. Tiempo promedio de entrega: 1,5 días (valor de ejemplo).</p></section>`}
+  return head('W8 · Auditoría y usuarios','Administración','Trazabilidad de cada solicitud, aprobación y descarga.')+tabs+b}
+};
+
+function render(){
+  let sc=(location.hash||'#login').slice(1);if(!SCREENS[sc])sc='login';
+  if(!S.role&&sc!=='login'&&sc!=='registro')sc='login';
+  if(S.role&&!['login','registro'].includes(sc)&&!ALLOWED[S.role].includes(sc))sc=HOME[S.role];
+  if(sc!=='estado')S.just=null;
+  S.cur=sc;
+  $('#nav').innerHTML=S.role?NAV[S.role].map(n=>`<button data-act="go" data-to="${n[0]}" ${(sc===n[0]||(sc==='revision'&&n[0]==='bandeja')||(sc==='descarga'&&n[0]==='estado'))?'aria-current="page"':''}>${n[1]}</button>`).join(''):'';
+  $('#who').innerHTML=S.role?`<span>${esc(WHO[S.role])} · ${ROLEN[S.role]}</span><button class="link" data-act="logout">Salir</button>`:'';
+  document.querySelectorAll('.demo [data-r]').forEach(b=>b.setAttribute('aria-pressed',String(S.role===b.dataset.r)));
+  $('#app').innerHTML=SCREENS[sc]();
+  if(S.last!==sc){S.last=sc;window.scrollTo(0,0);const h=$('#app h1');if(h){h.setAttribute('tabindex','-1');h.focus({preventScroll:true})}}
+}
+
+const ACT={
+ go:d=>go(d.to),
+ role:d=>{S.role=d.r;S.step=1;S.filter='Todas';if(window.innerWidth<700)$('#dm').open=false;go(HOME[d.r])},
+ logout:()=>{S.role=null;S.lmode='paciente';go('login')},
+ lmode:()=>{S.lmode=S.lmode==='personal'?'paciente':'personal';S.err='';render()},
+ reset:()=>{S=fresh();location.hash='login';render();toast('Datos de ejemplo restablecidos.')},
+ forgot:()=>toast('Enviaremos un enlace para restablecer la contraseña al correo registrado.'),
+ attach:d=>{if(d.k==='auth')S.form.auth='autorizacion_firmada.pdf';else S.rev.pdf='HC_'+(byId(S.sel)||{doc:'0'}).doc.replace(/\D/g,'')+'_2023-2026.pdf';render()},
+ next:()=>{const f=S.form;S.err='';
+   if(S.step===1){if(!f.doc.trim()||!f.exp)S.err='Escriba su documento y la fecha de expedición.';else if(f.code.trim()!=='482913')S.err='El código no coincide. En este prototipo use 482913.'}
+   if(S.step===2){if(f.para==='tercero'&&(!f.docT.trim()||!f.auth))S.err='Escriba el documento de la persona y adjunte la autorización.';else if(!f.desde||!f.hasta||f.desde>f.hasta)S.err='Revise el período: la fecha inicial debe ser anterior a la final.'}
+   if(!S.err)S.step++;render()},
+ back:()=>{S.step--;S.err='';render()},
+ send:()=>{const f=S.form,id='SOL-'+String(Math.max(...S.requests.map(r=>+r.id.slice(4)))+1).padStart(4,'0');
+   const r={id,owner:'pac',sol:PAC,doc:'CC '+f.doc,para:f.para==='mi'?'Ella misma':'Otra persona (tercero)',tipo:f.tipo,desde:f.desde,hasta:f.hasta,motivo:f.motivo,auth:f.para==='tercero'?f.auth:'',estado:'Recibida',t0:Date.now(),hist:[['Recibida',now()]]};
+   S.requests.unshift(r);S.notifs.unshift([now(),`Su solicitud ${id} fue recibida.`]);logEv(PAC,'Creó solicitud',id);
+   S.step=1;S.form.code='';S.form.para='mi';S.form.auth='';S.form.docT='';S.just=id;go('estado',id)},
+ dismiss:()=>{S.just=null;render()},
+ 'open-dl':d=>go('descarga',d.id),
+ download:d=>{logEv(PAC,'Descargó PDF',d.id);toast('Descarga simulada. En el sistema real se genera el PDF protegido.')},
+ filter:d=>{S.filter=d.f;render()},
+ review:d=>{const r=byId(d.id);S.rev={pdf:'',rmotivo:''};
+   if(r.estado==='Recibida'){r.estado='En revisión';r.hist.push(['En revisión',now()]);logEv(ARCH,'Abrió solicitud para revisión',r.id);if(r.owner==='pac')S.notifs.unshift([now(),`Su solicitud ${r.id} está en revisión.`])}
+   go('revision',d.id)},
+ reason:d=>{S.rev.rmotivo=REASONS[+d.i][1];S.err='';render();const t=$('#rv-m');if(t)t.focus()},
+ approve:()=>{const r=byId(S.sel);if(!S.rev.pdf){S.err='Adjunte el PDF de la historia clínica antes de aprobar.';return render()}
+   const t=now();r.estado='Disponible';r.pdf=S.rev.pdf;r.expMs=Date.now()+7*DAY;r.expira=fecha(new Date(r.expMs));r.hist.push(['Aprobada',t],['Disponible',t]);
+   if(r.owner==='pac')S.notifs.unshift([t,`Su solicitud ${r.id} ya está disponible para descarga.`]);logEv(ARCH,'Cargó PDF y aprobó',r.id);toast('Solicitud aprobada y publicada.');go('bandeja')},
+ reject:()=>{const r=byId(S.sel);if(!S.rev.rmotivo.trim()){S.err='Escriba el motivo del rechazo o elija uno frecuente.';return render()}
+   const t=now();r.estado='Rechazada';r.motivoRechazo=S.rev.rmotivo.trim();r.hist.push(['Rechazada',t]);
+   if(r.owner==='pac')S.notifs.unshift([t,`Su solicitud ${r.id} fue rechazada: ${r.motivoRechazo}`]);logEv(ARCH,'Rechazó solicitud',r.id);toast('Solicitud rechazada.');go('bandeja')},
+ tab:d=>{S.tab=d.t;render()}
+};
+document.addEventListener('click',e=>{const t=e.target.closest('[data-act]');if(!t)return;const f=ACT[t.dataset.act];if(f)f(t.dataset)});
+document.addEventListener('input',e=>{const n=e.target.name;if(!n)return;
+  if(n==='bq'||n==='aq'){S[n]=e.target.value;refreshRes();return}
+  if(n in S.form&&n!=='para')S.form[n]=e.target.value;else if(n in S.rev)S.rev[n]=e.target.value});
+document.addEventListener('change',e=>{const t=e.target;
+  if(t.name==='para'){S.form.para=t.value;render()}
+  else if(t.name==='aact'){S.aact=t.value;refreshRes()}
+  else if(t.dataset.user!==undefined){const u=S.users[+t.dataset.user];u[2]=t.value;logEv(ADM,'Cambió rol de '+u[0]+' a '+t.value,'—');toast('Rol actualizado.')}});
+document.addEventListener('submit',e=>{e.preventDefault();const k=e.target.dataset.form;
+  if(k==='login'){const fd=new FormData(e.target),rol=fd.get('lrol')||'paciente';
+    if(!String(fd.get('ldoc')).trim()||!String(fd.get('lpwd')).trim()){S.err='Escriba su documento y su contraseña.';return render()}
+    S.role=rol;S.step=1;S.filter='Todas';go(HOME[rol])}
+  if(k==='registro'){toast('Cuenta creada. Ya puede iniciar sesión.');go('login')}});
+window.addEventListener('hashchange',render);
+$('#dm').open=window.innerWidth>=700;
+render();
+})();
+</script>
+</body></html>
